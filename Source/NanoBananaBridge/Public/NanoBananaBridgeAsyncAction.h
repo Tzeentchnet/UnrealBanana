@@ -27,6 +27,10 @@ public:
     UFUNCTION(BlueprintCallable, meta=(BlueprintInternalUseOnly="true", WorldContext="WorldContextObject"), Category="Nano Banana")
     static UNanoBananaBridgeAsyncAction* CaptureAndGenerate(UObject* WorldContextObject, const FString& Prompt, bool bShowUI = true);
 
+    // Advanced: supply optional mask, size, and candidate count overrides
+    UFUNCTION(BlueprintCallable, meta=(BlueprintInternalUseOnly="true", WorldContext="WorldContextObject"), Category="Nano Banana")
+    static UNanoBananaBridgeAsyncAction* CaptureAndGenerateAdvanced(UObject* WorldContextObject, const FString& Prompt, class UTextureRenderTarget2D* OptionalMask, int32 NumImages = 1, int32 OutWidth = 1024, int32 OutHeight = 1024, const FString& NegativePrompt = TEXT(""), bool bShowUI = true);
+
     // Optional path to save input PNG; if empty, auto path under settings
     UPROPERTY()
     FString InputSavePath;
@@ -49,9 +53,17 @@ private:
     FString Prompt;
     bool bShowUI = true;
 
+    // Advanced optional mask
+    UPROPERTY()
+    TObjectPtr<class UTextureRenderTarget2D> OptionalMask;
+
+    int32 NumImages = 1;
+    int32 OutWidth = 1024;
+    int32 OutHeight = 1024;
+    FString NegativePrompt;
+
     void HandleCaptured(const struct FViewportCaptureResult& Capture, const FString& SavedPath);
     void SendToService(const TArray<uint8>& InputPNG);
     void HandleServiceResponse(TSharedPtr<class IHttpRequest>, TSharedPtr<class IHttpResponse>, bool bSucceeded);
     FString MakeTimestampedPath(const FString& BaseDir, const FString& Suffix) const;
 };
-
