@@ -1,0 +1,38 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Unreal Banana",
+  "Description": "Capture viewport, call Nano Banana with a prompt, show progress, and save results.",
+  "Category": "Rendering",
+  "CreatedBy": "Your Team",
+  "CreatedByURL": "",
+  "DocsURL": "",
+  "SupportURL": "",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "ViewportCapture",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "NanoBananaBridge",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "ImageComposer",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "UIProgress",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
