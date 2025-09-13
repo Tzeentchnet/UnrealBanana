@@ -171,6 +171,13 @@ void UNanoBananaBridgeAsyncAction::SendToService(const TArray<uint8>& InputPNG)
     FString ImageB64 = FBase64::Encode(InputPNG);
     FString BodyStr;
     const bool bUseGenerateContent = bIsGoogle && (Settings->bUseGenerateContent || Url.Contains(TEXT(":generateContent")));
+    if (!bUseGenerateContent)
+    {
+        OnFailed.Broadcast(TEXT("Only Gemini 2.5 Flash via :generateContent is supported."));
+        SetReadyToDestroy();
+        return;
+    }
+
     if (bUseGenerateContent)
     {
         // Google Gemini 2.5 Flash (generateContent) image-to-image with image_generation tool
@@ -275,46 +282,6 @@ void UNanoBananaBridgeAsyncAction::SendToService(const TArray<uint8>& InputPNG)
         FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
         Req->SetContentAsString(BodyStr);
     }
-    else if (bIsGoogle)
-    {
-        // Google Gemini Images style: contents.parts with text + inline_data
-        TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
-        TArray<TSharedPtr<FJsonValue>> Contents;
-        TSharedPtr<FJsonObject> UserContent = MakeShared<FJsonObject>();
-        UserContent->SetStringField(TEXT("role"), TEXT("user"));
-        TArray<TSharedPtr<FJsonValue>> Parts;
-        // Prompt text part
-        {
-            TSharedPtr<FJsonObject> PartText = MakeShared<FJsonObject>();
-            PartText->SetStringField(TEXT("text"), Prompt);
-            Parts.Add(MakeShared<FJsonValueObject>(PartText));
-        }
-        // Inline image part (reference / guidance)
-        {
-            TSharedPtr<FJsonObject> InlineData = MakeShared<FJsonObject>();
-            InlineData->SetStringField(TEXT("mime_type"), TEXT("image/png"));
-            InlineData->SetStringField(TEXT("data"), ImageB64);
-            TSharedPtr<FJsonObject> PartImage = MakeShared<FJsonObject>();
-            PartImage->SetObjectField(TEXT("inline_data"), InlineData);
-            Parts.Add(MakeShared<FJsonValueObject>(PartImage));
-        }
-        UserContent->SetArrayField(TEXT("parts"), Parts);
-        Contents.Add(MakeShared<FJsonValueObject>(UserContent));
-        Root->SetArrayField(TEXT("contents"), Contents);
-
-        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BodyStr);
-        FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
-        Req->SetContentAsString(BodyStr);
-    }
-    else
-    {
-        // Custom provider contract (prompt + image fields)
-        TSharedPtr<FJsonObject> Body = MakeShared<FJsonObject>();
-        Body->SetStringField(TEXT("prompt"), Prompt);
-        Body->SetStringField(TEXT("image"), ImageB64);
-        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BodyStr);
-        FJsonSerializer::Serialize(Body.ToSharedRef(), Writer);
-        Req->SetContentAsString(BodyStr);
     }
 
     Req->OnRequestProgress().BindLambda([this](FHttpRequestPtr, int32 BytesSent, int32 BytesReceived)
