@@ -95,6 +95,7 @@ UNanoBananaBridgeAsyncAction* UNanoBananaBridgeAsyncAction::CaptureAndGenerate(U
         Action->OutHeight = FMath::Max(1, Settings->DefaultHeight);
         Action->NegativePrompt = Settings->DefaultNegativePrompt;
     }
+    Action->RegisterWithGameInstance(InWorldContextObject);
     return Action;
 }
 
@@ -109,6 +110,7 @@ UNanoBananaBridgeAsyncAction* UNanoBananaBridgeAsyncAction::CaptureAndGenerateAd
     Action->OutWidth = FMath::Max(1, InOutWidth);
     Action->OutHeight = FMath::Max(1, InOutHeight);
     Action->NegativePrompt = InNegativePrompt;
+    Action->RegisterWithGameInstance(InWorldContextObject);
     return Action;
 }
 
@@ -282,7 +284,6 @@ void UNanoBananaBridgeAsyncAction::SendToService(const TArray<uint8>& InputPNG)
         FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
         Req->SetContentAsString(BodyStr);
     }
-    }
 
     Req->OnRequestProgress().BindLambda([this](FHttpRequestPtr, int32 BytesSent, int32 BytesReceived)
     {
@@ -423,3 +424,5 @@ FString UNanoBananaBridgeAsyncAction::MakeTimestampedPath(const FString& BaseDir
     }
     return Dir / FString::Printf(TEXT("NanoBanana_%s%s"), *Stamp, *Suffix);
 }
+
+
