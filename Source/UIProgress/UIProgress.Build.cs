@@ -16,6 +16,11 @@ public class UIProgress : ModuleRules
             "SlateCore",
             "NanoBananaBridge"
         });
+
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            "DeveloperSettings"
+        });
     }
 }
 

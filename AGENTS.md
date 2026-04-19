@@ -3,9 +3,11 @@
 This repository contains an Unreal Engine plugin composed of multiple C++ modules. Use this guide to navigate the codebase, build locally, and contribute effectively.
 
 ## Project Structure & Module Organization
-- Root: `UnrealBanana.uplugin` (plugin metadata), `README.md`.
+- Root: `UnrealBanana.uplugin` (plugin metadata), `README.md`, `Changelog.md`.
 - Source: `Source/<Module>/{Public,Private,*.Build.cs}`
-  - Modules: `ImageComposer`, `NanoBananaBridge`, `UIProgress`, `ViewportCapture`.
+  - Runtime modules: `NanoBananaBridge`, `ViewportCapture`, `ImageComposer`, `UIProgress`.
+  - Editor module: `UnrealBananaEditor` (Tools menu + Slate generation window).
+- Inside `NanoBananaBridge/Private/`: `Providers/{Google,Fal,Replicate}/`, `Http/`, `Tests/`.
 - Public headers are exported from `Public/`; implementation and tests live in `Private/`.
 
 ## Build, Test, and Development Commands
@@ -24,11 +26,11 @@ This repository contains an Unreal Engine plugin composed of multiple C++ module
 - If available, run clang-format before committing: `clang-format -i <files>`.
 
 ## Testing Guidelines
-- Framework: Unreal Automation Tests (spec- or simple-style).
-- Location: `Source/<Module>/Private/Tests/` (e.g., `ImageComposerTests.cpp`).
-- Naming: `F<Module>_<Feature>_Spec` or `F<Module>_<Feature>_Test`.
-- Run in editor: `UnrealEditor.exe <Project>.uproject -ExecCmds="Automation RunTests All; Quit"`.
-- Aim for coverage of public `Library` functions and module startup/shutdown paths.
+- Framework: Unreal Automation Tests (spec- or simple-style), guarded by `#if WITH_DEV_AUTOMATION_TESTS`.
+- Location: `Source/<Module>/Private/Tests/` (e.g., `Providers/Providers_RequestBuilder_Tests.cpp`).
+- Naming: `F<Module>_<Feature>_Spec` or `F<Module>_<Feature>_Test`; pretty name under `UnrealBanana.<Area>.<Feature>`.
+- Run in editor: `UnrealEditor.exe <Project>.uproject -ExecCmds="Automation RunTests UnrealBanana; Quit" -unattended -nullrhi`.
+- Aim for coverage of public `Library` functions, provider request builders, and module startup/shutdown paths.
 
 ## Commit & Pull Request Guidelines
 - Commits: concise, imperative subject; scope prefix when helpful (e.g., `ViewportCapture: fix capture size clamp`).
@@ -37,8 +39,8 @@ This repository contains an Unreal Engine plugin composed of multiple C++ module
 - Bump version in `UnrealBanana.uplugin` when adding features.
 
 ## Security & Configuration Tips
-- Do not commit secrets. Store runtime settings in project config or `UNanoBananaSettings` (Project Settings > Plugins if applicable).
-- Validate external I/O and guard async work in `NanoBananaBridge`.
+- Do not commit API keys. Use `UNanoBananaSettings` (Project Settings → Plugins → Nano Banana / Gemini Images) or the env-var fallbacks: `GEMINI_API_KEY` / `GOOGLE_API_KEY`, `FAL_KEY`, `REPLICATE_API_TOKEN`.
+- Validate external I/O and guard async work in `NanoBananaBridge`. Provider lifetimes use `TSharedFromThis` + `TWeakPtr` captures so in-flight HTTP callbacks stay safe.
 
 ## Agent-Specific Notes
 - Scope: entire repo. Preserve module boundaries and file layout.

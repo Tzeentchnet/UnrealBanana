@@ -1,15 +1,23 @@
-// Async action to capture viewport, send to Nano Banana, and save results
+// Async action: vendor-agnostic image generation, optionally seeded with a viewport capture.
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintAsyncActionBase.h"
 #include "Engine/Texture2D.h"
+#include "Templates/SharedPointer.h"
+#include "NanoBananaTypes.h"
 #include "NanoBananaBridgeAsyncAction.generated.h"
 
+class IImageGenProvider;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FNanoBananaProgress, float, Percent, const FString&, Stage);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FNanoBananaCompleted, UTexture2D*, ResultTexture, const FString&, SavedResultPath, const FString&, SavedCompositePath);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FNanoBananaCompleted, const TArray<FNanoBananaImageResult>&, Results, const FString&, CompositePath);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FNanoBananaFailed, const FString&, Error);
 
+/**
+ * Vendor-agnostic image generation async action. Supports Google Gemini, FAL.ai, and Replicate
+ * via the Vendor field on FNanoBananaRequest.
+ */
 UCLASS()
 class NANOBANANABRIDGE_API UNanoBananaBridgeAsyncAction : public UBlueprintAsyncActionBase
 {
@@ -24,46 +32,61 @@ public:
     UPROPERTY(BlueprintAssignable)
     FNanoBananaFailed OnFailed;
 
+    /**
+     * Generate one or more images directly from an FNanoBananaRequest.
+     * @param Request           Vendor + model + prompt + reference images, etc.
+     * @param bAlsoSaveComposite If true and there is at least one reference image, also save a side-by-side PNG.
+     */
     UFUNCTION(BlueprintCallable, meta=(BlueprintInternalUseOnly="true", WorldContext="WorldContextObject"), Category="Nano Banana")
-    static UNanoBananaBridgeAsyncAction* CaptureAndGenerate(UObject* WorldContextObject, const FString& Prompt, bool bShowUI = true);
+    static UNanoBananaBridgeAsyncAction* GenerateImage(UObject* WorldContextObject, const FNanoBananaRequest& Request, bool bAlsoSaveComposite = true);
 
-    // Advanced: supply optional mask, size, and candidate count overrides
+    /**
+     * Convenience: capture the current game viewport, attach it as a reference image,
+     * and submit a request using the project's default vendor/model (overridable here).
+     */
     UFUNCTION(BlueprintCallable, meta=(BlueprintInternalUseOnly="true", WorldContext="WorldContextObject"), Category="Nano Banana")
-    static UNanoBananaBridgeAsyncAction* CaptureAndGenerateAdvanced(UObject* WorldContextObject, const FString& Prompt, class UTextureRenderTarget2D* OptionalMask, int32 NumImages = 1, int32 OutWidth = 1024, int32 OutHeight = 1024, const FString& NegativePrompt = TEXT(""), bool bShowUI = true);
+    static UNanoBananaBridgeAsyncAction* CaptureViewportAndGenerate(
+        UObject* WorldContextObject,
+        const FString& Prompt,
+        ENanoBananaVendor Vendor = ENanoBananaVendor::Fal,
+        ENanoBananaModel Model = ENanoBananaModel::NanoBanana2,
+        bool bShowUI = true,
+        bool bAlsoSaveComposite = true);
 
-    // Optional path to save input PNG; if empty, auto path under settings
+    /** Cancel an in-flight request. Broadcasts OnFailed("Canceled") and tears down. */
+    UFUNCTION(BlueprintCallable, Category="Nano Banana")
+    void Cancel();
+
+    // Overrides for save paths. Leave empty to auto-name under settings OutputDirectory.
     UPROPERTY()
     FString InputSavePath;
 
-    // Optional path to save result PNG; if empty, auto path under settings
-    UPROPERTY()
-    FString ResultSavePath;
-
-    // Optional path to save composite PNG; if empty, auto path under settings
     UPROPERTY()
     FString CompositeSavePath;
 
 protected:
     virtual void Activate() override;
+    virtual void BeginDestroy() override;
 
 private:
+    enum class EMode : uint8 { Direct, CaptureFirst };
+
     UPROPERTY()
     TObjectPtr<UObject> WorldContextObject;
 
-    FString Prompt;
+    FNanoBananaRequest Request;
+    EMode Mode = EMode::Direct;
     bool bShowUI = true;
+    bool bAlsoSaveComposite = true;
+    bool bFinished = false;
 
-    // Advanced optional mask
-    UPROPERTY()
-    TObjectPtr<class UTextureRenderTarget2D> OptionalMask;
+    TSharedPtr<IImageGenProvider, ESPMode::ThreadSafe> Provider;
 
-    int32 NumImages = 1;
-    int32 OutWidth = 1024;
-    int32 OutHeight = 1024;
-    FString NegativePrompt;
-
+    void RunProvider();
     void HandleCaptured(const struct FViewportCaptureResult& Capture, const FString& SavedPath);
-    void SendToService(const TArray<uint8>& InputPNG);
-    void HandleServiceResponse(TSharedPtr<class IHttpRequest>, TSharedPtr<class IHttpResponse>, bool bSucceeded);
+    void HandleSuccess(TArray<TArray<uint8>> Images, const FString& RawResponse);
+    void Fail(const FString& Error);
+
     FString MakeTimestampedPath(const FString& BaseDir, const FString& Suffix) const;
+    void DumpDebug(const FString& Suffix, const FString& Body) const;
 };

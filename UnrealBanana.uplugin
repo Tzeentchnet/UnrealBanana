@@ -1,17 +1,18 @@
 {
   "FileVersion": 3,
-  "Version": 1,
-  "VersionName": "0.1.0",
+  "Version": 2,
+  "VersionName": "0.2.0",
   "FriendlyName": "Unreal Banana",
-  "Description": "Capture viewport, call Nano Banana with a prompt, show progress, and save results.",
+  "Description": "Capture viewport and generate images via Nano Banana / Nano Banana 2 / Nano Banana Pro on Google Gemini, FAL.ai, or Replicate.",
   "Category": "Rendering",
-  "CreatedBy": "Your Team",
+  "CreatedBy": "Kenneth Peters (Tzeentchnet)",
   "CreatedByURL": "",
   "DocsURL": "",
   "SupportURL": "",
+  "EngineVersion": "5.7.0",
   "CanContainContent": false,
   "IsBetaVersion": true,
-  "IsExperimentalVersion": true,
+  "IsExperimentalVersion": false,
   "Installed": false,
   "Modules": [
     {
@@ -33,6 +34,11 @@
       "Name": "UIProgress",
       "Type": "Runtime",
       "LoadingPhase": "Default"
+    },
+    {
+      "Name": "UnrealBananaEditor",
+      "Type": "Editor",
+      "LoadingPhase": "PostEngineInit"
     }
   ]
 }
